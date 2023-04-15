@@ -11,6 +11,29 @@ from pytorch3d.renderer import (
     PointsRasterizer,
 )
 
+def visualize_plot_inputImg_pcloudGT(input_image, ground_truth_pointcloud):
+    input_image = input_image.detach().cpu().numpy()*255
+    input_image = input_image.astype(np.uint8)[0]
+    
+    colors = torch.zeros_like(ground_truth_pointcloud)
+    pc = pytorch3d.structures.Pointclouds(points=ground_truth_pointcloud, features=colors)
+
+    pcloud_img = render_pointclouds_single_image_plot(pc, 256, device='cuda')
+
+    # subplot both input img and pcloud img
+    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    ax[0].imshow(input_image)
+    ax[0].set_title('Input image')
+    ax[1].imshow(pcloud_img)
+    ax[1].set_title('Ground truth pointcloud')
+    plt.show()
+
+
+def visualize_inputImg_pcloudGT(input_images, ground_truth_pointcloud, output_path_img, output_path_pcloudGT):
+    images = input_images.detach().cpu().numpy()*255
+    images = images.astype(np.uint8)[0]
+    imageio.imwrite(output_path_img, images)
+    visualize_pointcloud_single_image(ground_truth_pointcloud, 256,output_path_pcloudGT, device='cuda', export=True)
 
 
 def visualize_voxelgrid(voxelgrid, image_size, output_path, device='cuda', render=False, export=False, distance=1.5, start_angle=-180):
@@ -212,3 +235,34 @@ def render_pointclouds_single_image(pointclouds, image_size, output_path, device
         images = rend.detach().cpu().numpy()*255
         images = images.astype(np.uint8)[0]
         imageio.imwrite(output_path, images)
+
+def render_pointclouds_single_image_plot(pointclouds, image_size, device):
+    raster_settings = PointsRasterizationSettings(image_size=image_size, radius=0.005,)
+    points_renderer = PointsRenderer(
+        rasterizer=PointsRasterizer(raster_settings=raster_settings),
+        compositor=AlphaCompositor(background_color=(1, 1, 1)),
+    )
+
+    # set 12 cameras to render images 
+    num_views = 1
+    R, T = pytorch3d.renderer.look_at_view_transform(
+        dist=2,
+        elev=0,
+        azim=0,
+    )
+    T+=torch.tensor([0, -0.7, 0])
+    many_cameras = pytorch3d.renderer.FoVPerspectiveCameras(
+        R=R,
+        T=T,
+        device=device
+    )
+
+    # Render pc1
+    rend = points_renderer(pointclouds.extend(num_views), cameras=many_cameras)[..., :3] 
+    images = rend.detach().cpu().numpy()*255
+    images = images.astype(np.uint8)[0]
+
+    return images
+
+def render_prediction_iterations(images_list, save_path):
+    imageio.mimsave(save_path, images_list, fps=15)
