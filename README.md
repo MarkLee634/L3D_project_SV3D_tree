@@ -7,8 +7,16 @@
 mv `path_to_dataset` `path_to_project/data`
 ```
 
+# split the dataset
+1. split data_list.txt into train_list.txt and test_list.txt
+```
+python split_traintest.py ----data_list_path 'PATH_TO_DATA_LIST.txt'
+```
+2. Verify both txt files have been generated.
+
+
 # training for unit test
-Verify pix2pcloud for a single item from dataset.
+1. Verify pix2pcloud for a single item from dataset.
 ```
 python train.py --unit_test True --batch_size 1 --viz_debug True --max_iter 1000
 ```
@@ -16,7 +24,7 @@ python train.py --unit_test True --batch_size 1 --viz_debug True --max_iter 1000
 ![Motion from scripted interface](out/pcloud_iterations.gif)
 
 # training full
-Verify pix2pcloud for a single item from dataset.
+1. Verify pix2pcloud for a single item from dataset.
 ```
 python train.py  --batch_size 16  --max_iter 10000
 ```

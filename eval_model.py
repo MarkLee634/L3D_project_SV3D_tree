@@ -121,18 +121,9 @@ def evaluate(predictions, mesh_gt, thresholds, args):
 
 
 def evaluate_model(args):
-    # r2n2_dataset = R2N2("test", dataset_location.SHAPENET_PATH, dataset_location.R2N2_PATH, dataset_location.SPLITS_PATH, return_voxels=True, return_feats=args.load_feat)
-
-    # loader = torch.utils.data.DataLoader(
-    #     r2n2_dataset,
-    #     batch_size=args.batch_size,
-    #     num_workers=args.num_workers,
-    #     collate_fn=collate_batched_R2N2,
-    #     pin_memory=True,
-    #     drop_last=True)
 
     tree_blender_dataset = TreeBlenderDataset(dataset_location.DATA_DIR, 
-                                              dataset_location.DATA_LIST_FILE,
+                                              dataset_location.TEST_LIST_FILE,
                                               pc_gt_num_points=args.n_points)
     loader = torch.utils.data.DataLoader(
         tree_blender_dataset,
@@ -231,19 +222,19 @@ def evaluate_model(args):
             # plt.figure()
 
             # subplot(r,c) provide the no. of rows and columns
-            # f, axarr = plt.subplots(1,3)
+            f, axarr = plt.subplots(1,3)
 
-            # # use the created array to output your multiple images. In this case I have stacked 4 images vertically
-            # images_gt_ = images_gt.detach().cpu().numpy()
+            # use the created array to output your multiple images. In this case I have stacked 4 images vertically
+            images_gt_ = images_gt.detach().cpu().numpy()
 
-            # images_gt_ = images_gt_.squeeze(0)
-            # axarr[0].imshow(images_gt_)
-            # axarr[0].set_title('Input Image')
-            # axarr[1].imshow(rendered_pred)
-            # axarr[1].set_title('Pred pcloud')
-            # axarr[2].imshow(rendered_gt)
-            # axarr[2].set_title('GT mesh')
-            # plt.show()
+            images_gt_ = images_gt_.squeeze(0)
+            axarr[0].imshow(images_gt_)
+            axarr[0].set_title('Input Image')
+            axarr[1].imshow(rendered_pred)
+            axarr[1].set_title('Pred pcloud')
+            axarr[2].imshow(rendered_gt)
+            axarr[2].set_title('GT mesh')
+            plt.show()
 
             
 

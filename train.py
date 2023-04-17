@@ -41,7 +41,7 @@ def get_args_parser():
 
 def train_model(args):
     tree_blender_dataset = TreeBlenderDataset(dataset_location.DATA_DIR, 
-                                              dataset_location.DATA_LIST_FILE,
+                                              dataset_location.TRAIN_LIST_FILE,
                                               pc_gt_num_points=args.n_points)
     loader = torch.utils.data.DataLoader(
         tree_blender_dataset,
@@ -56,7 +56,7 @@ def train_model(args):
     print(f'Train loader size: {len(train_loader)}')
     # ============ preparing optimizer ... ============
     optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5000, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
     start_iter = 0
     start_time = time.time()
 

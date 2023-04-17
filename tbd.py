@@ -57,7 +57,7 @@ class TBD(torch.utils.data.Dataset):
         gt_pointcloud = self.pointcloud_from_mesh(mesh, self.pc_gt_num_points)[0]
         # Rotate pointcloud to align with camera
         # View-aligned coordinate system
-        #gt_pointcloud = (R@gt_pointcloud.T).T 
+        gt_pointcloud = (R@gt_pointcloud.T).T 
         tree_dict["verts"] = verts
         tree_dict["faces"] = faces
         tree_dict["textures"] = textures
