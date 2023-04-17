@@ -15,6 +15,7 @@ import wandb
 
 '''
 python train.py --unit_test True --batch_size 1 --viz_debug True --max_iter 1000
+python train.py  --batch_size 16  --max_iter 10000
 '''
 
 def get_args_parser():
@@ -29,7 +30,7 @@ def get_args_parser():
     parser.add_argument('--n_points', default=5000, type=int)
     parser.add_argument('--w_chamfer', default=1.0, type=float)
     parser.add_argument('--w_smooth', default=0.1, type=float)
-    parser.add_argument('--save_freq', default=10000, type=int)    
+    parser.add_argument('--save_freq', default=100, type=int)    
     parser.add_argument('--device', default='cuda', type=str) 
     parser.add_argument('--load_feat', action='store_true') 
     parser.add_argument('--load_checkpoint', action='store_true')          
@@ -126,7 +127,7 @@ def train_model(args):
 
         #print("[%4d/%4d]; time: %.0fs (%.2f, %.2f); loss: %.3f" % (step, args.max_iter, total_time, read_time, iter_time, loss_vis))
         print(f'[{step:4d}/{args.max_iter:4d}]; ellapsed time: {total_time:.0f}s ({read_time:.2f}, {iter_time:.2f}); loss: {loss_vis:.3f}')
-        # wandb.log({"step": step, "loss_vis loss": loss_vis})
+        wandb.log({"step": step, "loss_vis loss": loss_vis})
         
         loss_history.append(loss_vis)
     
@@ -134,11 +135,11 @@ def train_model(args):
     utils_viz.render_prediction_iterations(prediction_img_history, f'out/pcloud_iterations.gif')
     
     # Save loss to txt file
-    loss_history = np.array(loss_history)
-    np.savetxt(f'loss_{args.type}.txt', loss_history) 
+    # loss_history = np.array(loss_history)
+    # np.savetxt(f'loss_{args.type}.txt', loss_history) 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Singleto3D', parents=[get_args_parser()])
     args = parser.parse_args()
-    # wandb.init(project="L3D-final")
+    wandb.init(project="L3D-final")
     train_model(args)

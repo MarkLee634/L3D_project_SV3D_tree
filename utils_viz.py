@@ -11,6 +11,26 @@ from pytorch3d.renderer import (
     PointsRasterizer,
 )
 
+
+def visualize_plot_inputImg_meshGT(input_image, ground_truth_mesh):
+    input_image = input_image.detach().cpu().numpy()*255
+    input_image = input_image.astype(np.uint8)[0]
+    
+
+    mesh_img = get_image_from_mesh(ground_truth_mesh, 256)
+
+    # output_path = 'out/mesh.png'
+    # render_mesh_single_image(ground_truth_mesh, 256, output_path, device='cuda', render=False, export=True)
+
+
+    # subplot both input img and pcloud img
+    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    ax[0].imshow(input_image)
+    ax[0].set_title('Input image')
+    ax[1].imshow(mesh_img)
+    ax[1].set_title('Ground truth mesh')
+    plt.show()
+
 def visualize_plot_inputImg_pcloudGT(input_image, ground_truth_pointcloud):
     input_image = input_image.detach().cpu().numpy()*255
     input_image = input_image.astype(np.uint8)[0]
@@ -67,6 +87,14 @@ def visualize_pointcloud_single_image(pointcloud, image_size, output_path, devic
     pc = pytorch3d.structures.Pointclouds(points=pointcloud, features=colors)
     render_pointclouds_single_image(pc, image_size, output_path, device, export)
 
+def get_image_from_pointcloud(pointcloud, image_size, device='cuda'):
+
+    colors = torch.zeros_like(pointcloud)
+    pc = pytorch3d.structures.Pointclouds(points=pointcloud, features=colors)
+    pcloud_img = render_pointclouds_single_image_plot(pc, image_size, device)
+
+    return pcloud_img
+
 def visualize_mesh(mesh, image_size, output_path, device='cuda', render=False, export=False):
     vertices = mesh.verts_packed().unsqueeze(0)
     faces = mesh.faces_packed().unsqueeze(0)
@@ -84,6 +112,18 @@ def visualize_mesh_single_image(mesh, image_size, output_path, device='cuda', re
     textures = pytorch3d.renderer.TexturesVertex(textures_rgb)
     mesh = pytorch3d.structures.Meshes(verts=vertices, faces=faces, textures=textures)
     render_mesh_single_image(mesh, image_size, output_path, device, render, export)
+
+def get_image_from_mesh(mesh, image_size, device='cuda'):
+
+    vertices = mesh.verts_packed().unsqueeze(0)
+    faces = mesh.faces_packed().unsqueeze(0)
+    textures_rgb = torch.zeros_like(vertices)
+    textures_rgb = textures_rgb + 0.5
+    textures = pytorch3d.renderer.TexturesVertex(textures_rgb)
+    mesh = pytorch3d.structures.Meshes(verts=vertices, faces=faces, textures=textures)
+    mesh_img = render_mesh_single_image_plot(mesh, image_size, device)
+
+    return mesh_img
 
 def render_mesh(meshes, image_size, output_path, device, render, export, distance=1.5, start_angle=-180):
     # Rasterizer: Given a pixel, which triangles correspond to it?
@@ -178,6 +218,45 @@ def render_mesh_single_image(meshes, image_size, output_path, device, render, ex
         images = images.detach().cpu().numpy()*255
         images = images.astype(np.uint8)[0]
         imageio.imwrite(output_path, images)
+
+
+def render_mesh_single_image_plot(meshes, image_size,device, distance=1.5):
+    # Rasterizer: Given a pixel, which triangles correspond to it?
+    raster_settings = pytorch3d.renderer.RasterizationSettings(image_size=image_size)
+    rasterizer = pytorch3d.renderer.MeshRasterizer(
+        raster_settings=raster_settings,
+    )
+    # Shader: Given triangle, texture, lighting, etc, how should the pixel be colored?
+    shader = pytorch3d.renderer.HardPhongShader(device=device)
+    # Renderer
+    renderer = pytorch3d.renderer.MeshRenderer(
+        rasterizer=rasterizer,
+        shader=shader,
+    )
+
+    # Add lights
+    lights = pytorch3d.renderer.PointLights(location=[[0, 0, -3]], device=device)
+
+    # set 12 cameras to render images 
+    num_views = 1
+    R, T = pytorch3d.renderer.look_at_view_transform(
+        dist=2,
+        elev=0,
+        azim=0,
+    )
+    T+=torch.tensor([0, -0.7, 0])
+    many_cameras = pytorch3d.renderer.FoVPerspectiveCameras(
+        R=R,
+        T=T,
+        device=device
+    )
+
+    images = renderer(meshes.extend(num_views), cameras=many_cameras, lights=lights)
+
+    images = images.detach().cpu().numpy()*255
+    images = images.astype(np.uint8)[0]
+    
+    return images
 
 def render_pointclouds(pointclouds, image_size, output_path, device, export=False):
     raster_settings = PointsRasterizationSettings(image_size=image_size, radius=0.005,)
