@@ -50,14 +50,13 @@ class TBD(torch.utils.data.Dataset):
 
         # Sample a random view for the image
         image_sample_idx = np.random.choice(self.num_views, 1)
-        image_sample_idx = [0]
         rendered_images = self.image_from_mesh(mesh)[image_sample_idx][0][..., :3]
         R = self.R[image_sample_idx][0].to(self.device)
         T = self.T[image_sample_idx][0].to(self.device)
         gt_pointcloud = self.pointcloud_from_mesh(mesh, self.pc_gt_num_points)[0]
         # Rotate pointcloud to align with camera
         # View-aligned coordinate system
-        gt_pointcloud = (R@gt_pointcloud.T).T 
+        gt_pointcloud = (R.T@gt_pointcloud.T).T 
         tree_dict["verts"] = verts
         tree_dict["faces"] = faces
         tree_dict["textures"] = textures

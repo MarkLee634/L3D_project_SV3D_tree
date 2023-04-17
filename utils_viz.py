@@ -327,7 +327,7 @@ def render_pointclouds_single_image_plot(pointclouds, image_size, device):
     R, T = pytorch3d.renderer.look_at_view_transform(
         dist=2,
         elev=0,
-        azim=0,
+        azim=180,
     )
     T+=torch.tensor([0, -0.7, 0])
     many_cameras = pytorch3d.renderer.FoVPerspectiveCameras(
