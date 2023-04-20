@@ -3,9 +3,10 @@ import time
 import torch
 import dataset_location
 import utils_viz
-from losses import chamfer_loss
+from losses import chamfer_loss, density_aware_chamfer_loss, earth_mover_distance
 from tbd import TBD as TreeBlenderDataset, collate_batched_TBD
 from model import SingleViewto3D
+import pytorch3d
 
 #added for debugging
 import sys
@@ -22,7 +23,7 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Singleto3D', add_help=False)
     # Model parameters
     parser.add_argument('--arch', default='resnet18', type=str)
-    parser.add_argument('--lr', default=4e-4, type=str)
+    parser.add_argument('--lr', default=4e-4, type=float)
     parser.add_argument('--max_iter', default=10000, type=int)
     parser.add_argument('--log_freq', default=1000, type=str)
     parser.add_argument('--batch_size', default=2, type=int)
@@ -55,13 +56,13 @@ def train_model(args):
     model.train()
     print(f'Train loader size: {len(train_loader)}')
     # ============ preparing optimizer ... ============
-    optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)  # to use with ViTs
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
+    optimizer = torch.optim.Adam(model.parameters(), lr = args.lr, weight_decay=1e-5)  # to use with ViTs
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.4)
     start_iter = 0
     start_time = time.time()
 
     if args.load_checkpoint:
-        checkpoint = torch.load(f'checkpoint_{args.type}.pth')
+        checkpoint = torch.load(f'checkpoint.pth')
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         start_iter = checkpoint['step']
@@ -89,15 +90,14 @@ def train_model(args):
         else:
             feed_dict = next(train_loader)
             
-        input_images = feed_dict['images']
+        input_images = feed_dict['rgbd'] # Change input type here
         ground_truth_pointcloud = feed_dict['pointcloud']
-
         
-
         read_time = time.time() - read_start_time
         prediction_3d = model(input_images, args)
         loss = chamfer_loss(prediction_3d, ground_truth_pointcloud)
-
+        #loss = density_aware_chamfer_loss(prediction_3d, ground_truth_pointcloud)
+        #loss = earth_mover_distance(prediction_3d, ground_truth_pointcloud)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -120,9 +120,19 @@ def train_model(args):
                 'optimizer_state_dict': optimizer.state_dict()
                 }, f'checkpoint.pth')
 
-        if step % len(train_loader) == 0: #Save image after one epoch 
-            utils_viz.visualize_pointcloud_single_image(prediction_3d, 256, 
-                                            f'out/{step:05d}.png', device='cuda', export=True)
+        if step % 10==0: #len(train_loader) == 0: #Save image after one epoch
+            img_in = (input_images[0].cpu().numpy()[..., :3]*255).astype(np.uint8)
+            # Convert img_in to 3 channels
+            #imageio.imwrite(f'out/{step:05d}_input.png', img_in)
+            colors = torch.zeros_like(prediction_3d)
+            pc = pytorch3d.structures.Pointclouds(points=prediction_3d, features=colors)
+            img_out = utils_viz.render_pointclouds_single_image(pc, 256, None, 'cuda', export=True)
+            # Combine img_in and img_out side by side
+            img_save = np.concatenate((img_in, img_out), axis=1)
+            imageio.imwrite(f'out/{step:05d}.png', img_save)
+            #utils_viz.visualize_pointcloud_single_image(prediction_3d, 256, 
+            #                                f'out/{step:05d}.png', device='cuda', export=True)
+            
             prediction_img_history.append(imageio.imread(f'out/{step:05d}.png'))            
 
         #print("[%4d/%4d]; time: %.0fs (%.2f, %.2f); loss: %.3f" % (step, args.max_iter, total_time, read_time, iter_time, loss_vis))
