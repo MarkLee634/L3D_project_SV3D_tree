@@ -240,11 +240,11 @@ def render_mesh_single_image_plot(meshes, image_size,device, distance=1.5):
     # set 12 cameras to render images 
     num_views = 1
     R, T = pytorch3d.renderer.look_at_view_transform(
-        dist=2,
+        dist=1,
         elev=0,
         azim=0,
     )
-    T+=torch.tensor([0, -0.7, 0])
+    T+=torch.tensor([0, -0.5, 0])
     many_cameras = pytorch3d.renderer.FoVPerspectiveCameras(
         R=R,
         T=T,
@@ -268,11 +268,11 @@ def render_pointclouds(pointclouds, image_size, output_path, device, export=Fals
     # set 12 cameras to render images 
     num_views = 36
     R, T = pytorch3d.renderer.look_at_view_transform(
-        dist=2,
+        dist=1,
         elev=0,
         azim=np.linspace(-180, 180, num_views, endpoint=False),
     )
-    T += torch.tensor([0, -0.7, 0])
+    T += torch.tensor([0, -0.5, 0])
     many_cameras = pytorch3d.renderer.FoVPerspectiveCameras(
         R=R,
         T=T,
@@ -298,11 +298,11 @@ def render_pointclouds_single_image(pointclouds, image_size, output_path, device
     # set 12 cameras to render images 
     num_views = 1
     R, T = pytorch3d.renderer.look_at_view_transform(
-        dist=2,
+        dist=1,
         elev=0,
-        azim=0,
+        azim=180,
     )
-    T+=torch.tensor([0, -0.7, 0])
+    T+=torch.tensor([0, -0.5, 0])
     many_cameras = pytorch3d.renderer.FoVPerspectiveCameras(
         R=R,
         T=T,
@@ -313,6 +313,7 @@ def render_pointclouds_single_image(pointclouds, image_size, output_path, device
         rend = points_renderer(pointclouds.extend(num_views), cameras=many_cameras)[..., :3] 
         images = rend.detach().cpu().numpy()*255
         images = images.astype(np.uint8)[0]
+        return images
         imageio.imwrite(output_path, images)
 
 def render_pointclouds_single_image_plot(pointclouds, image_size, device):
@@ -325,11 +326,11 @@ def render_pointclouds_single_image_plot(pointclouds, image_size, device):
     # set 12 cameras to render images 
     num_views = 1
     R, T = pytorch3d.renderer.look_at_view_transform(
-        dist=2,
+        dist=1,
         elev=0,
         azim=180,
     )
-    T+=torch.tensor([0, -0.7, 0])
+    T+=torch.tensor([0, -0.5, 0])
     many_cameras = pytorch3d.renderer.FoVPerspectiveCameras(
         R=R,
         T=T,

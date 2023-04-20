@@ -35,7 +35,7 @@ class TBD(torch.utils.data.Dataset):
         # Camera rendering parameters
         self.num_views = 24
         self.elevation = 0
-        self.distance = 2
+        self.distance = 1
         self.image_size = 256
         self._setup_renderer()
     
@@ -50,7 +50,10 @@ class TBD(torch.utils.data.Dataset):
 
         # Sample a random view for the image
         image_sample_idx = np.random.choice(self.num_views, 1)
-        rendered_images = self.image_from_mesh(mesh)[image_sample_idx][0][..., :3]
+        rendered_images, rendered_depth = self.image_from_mesh(mesh)
+        rendered_images = rendered_images[image_sample_idx][0][..., :3]
+        rendered_depth = rendered_depth[image_sample_idx][0]
+        rendered_rgbd = torch.cat([rendered_images, rendered_depth], dim=-1)
         R = self.R[image_sample_idx][0].to(self.device)
         T = self.T[image_sample_idx][0].to(self.device)
         gt_pointcloud = self.pointcloud_from_mesh(mesh, self.pc_gt_num_points)[0]
@@ -62,6 +65,8 @@ class TBD(torch.utils.data.Dataset):
         tree_dict["textures"] = textures
         tree_dict["mesh"] = mesh
         tree_dict["images"] = rendered_images
+        tree_dict["depth"] = rendered_depth
+        tree_dict["rgbd"] = rendered_rgbd
         tree_dict['R'] = R
         tree_dict['T'] = T
         tree_dict["pointcloud"] = gt_pointcloud
@@ -114,7 +119,7 @@ class TBD(torch.utils.data.Dataset):
             elev=self.elevation,
             azim=np.linspace(0, 360, self.num_views, endpoint=False),
         )
-        self.T+=torch.tensor([0, -0.7, 0])
+        self.T+=torch.tensor([0, -0.5, 0])
         self.many_cameras = pytorch3d.renderer.FoVPerspectiveCameras(
             R=self.R,
             T=self.T,
@@ -131,7 +136,8 @@ class TBD(torch.utils.data.Dataset):
     
     def image_from_mesh(self, mesh):
         images = self.renderer(mesh.extend(self.num_views), cameras=self.many_cameras, lights=self.lights)        
-        return images
+        fragments = self.renderer.rasterizer(mesh.extend(self.num_views), cameras=self.many_cameras)    
+        return images, fragments.zbuf # depth
     
     def pointcloud_from_mesh(self, mesh, num_points):
         pointcloud = sample_points_from_meshes(mesh, num_points)    
@@ -153,7 +159,11 @@ def collate_batched_TBD(batch):
     for k in batch[0].keys():
         collated_dict[k] = [d[k] for d in batch]
     if 'images' in collated_dict.keys():
-        collated_dict['images'] = torch.stack(collated_dict['images'])    
+        collated_dict['images'] = torch.stack(collated_dict['images'])  
+    if 'depth' in collated_dict.keys():
+        collated_dict['depth'] = torch.stack(collated_dict['depth'])  
+    if 'rgbd' in collated_dict.keys():
+        collated_dict['rgbd'] = torch.stack(collated_dict['rgbd'])
     if 'pointcloud' in collated_dict.keys():
         collated_dict['pointcloud'] = torch.stack(collated_dict['pointcloud'])
     if 'R' in collated_dict.keys():
@@ -173,7 +183,19 @@ if __name__ == "__main__":
         textures = tree_dict["textures"]
         mesh = tree_dict["mesh"]
         images = tree_dict["images"]
+        depth = tree_dict["depth"]
         gt_pointcloud = tree_dict["pointcloud"]
+
+        # plot image and depth
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1, 2)
+        ax[0].imshow(images.cpu())
+        ax[0].axis("off")
+        ax[1].imshow(depth.cpu())
+        ax[1].axis("off")
+        plt.show()    
+
+        '''
         images, mesh, cameras = tbd.debug(verts, faces, textures)
         print(f'images.shape: {images.shape}')
         print(f'gt_pointcloud.shape: {gt_pointcloud.shape}')
@@ -189,11 +211,12 @@ if __name__ == "__main__":
             ax.imshow(image.cpu())
             ax.axis("off")
         plt.show()
+        
 
         # Show the mesh in interactive plotly
         from pytorch3d.vis.plotly_vis import plot_scene
         fig = plot_scene({"All Views": {"Mesh": mesh, "Cameras": cameras,},}); fig.show()
 
         break
-    
+        '''
     
