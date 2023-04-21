@@ -95,9 +95,9 @@ def train_model(args):
         
         read_time = time.time() - read_start_time
         prediction_3d = model(input_images, args)
-        loss = chamfer_loss(prediction_3d, ground_truth_pointcloud)
+        #loss = chamfer_loss(prediction_3d, ground_truth_pointcloud)
         #loss = density_aware_chamfer_loss(prediction_3d, ground_truth_pointcloud)
-        #loss = earth_mover_distance(prediction_3d, ground_truth_pointcloud)
+        loss = earth_mover_distance(prediction_3d, ground_truth_pointcloud)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
